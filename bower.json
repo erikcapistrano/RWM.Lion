@@ -2,9 +2,9 @@
     "name": "RWM-Lion",
     "description": "Resorts World Manila Events API",
     "documentation":"https://phoenix.rwmanila.com/lion/dev",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "keywords": ["rwmanila", "gaming", "casino", "api"],
-    "main": ["dist/js/lion.js","dist/css/lion.css"],
+    "main": ["dist/js/lion.js"],
     "ignore": [".*"],
     "dependencies": {
         "jquery": ">= 1.9.0",

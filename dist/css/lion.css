@@ -1,0 +1,36 @@
+@import url(https://fonts.googleapis.com/css?family=Dosis);
+
+#lionMsgBox {
+    min-width: 600px;
+    font-family: 'Dosis', sans-serif;
+}
+
+#lionMsgHeaderText {
+    display: inline-block;
+    height: 40px;
+    width: 40%;
+    vertical-align: middle;
+    text-align: right;
+    margin: 0;
+}
+
+#lionMsgContent {
+    background-image: url("img/LionLogo.png");
+    background-size: 150px;
+    background-repeat: no-repeat;
+    background-position: center right;
+}
+
+#lionMsgLogo {
+    background-color: #000000;
+}
+
+#lionMsgBodyAuthFormEmpNum, 
+#lionMsgBodyAuthFormEmpPwd,
+#lionMsgBodyAuthFormEmpLoc {
+    background-color: transparent;
+}
+
+#lionMsgFooter .btn {
+    width: 150px;
+}
