@@ -1,11 +1,11 @@
 /*
-Lion API v.0.0.1
+Lion API v.0.0.3
 https://phoenix.rwmanila.com/lion/dev
 (c) 2014 by it.appdev@rwmanila.com. All rights reserved.
 */
 (function(lion, undefined) {
     // Public Properties
-    lion.ver = "0.0.2";
+    lion.ver = "0.0.3";
     lion.live = false;
     lion.phoenixServer = {
         liveUserId: "lion.live",
@@ -14,11 +14,13 @@ https://phoenix.rwmanila.com/lion/dev
         debugApiKey: "33390cd9177cb6f81f9177208387983291876e5b",
         send: function sendF(cgrp, cmnd, prms, callback) {
             if(lion.live) {
-                if(lion.event.appCode.length > 0) phoenix.userId = lion.phoenixServer.liveUserId + "+" + lion.appCode;
+                if(lion.event.appCode.length > 0) //
+                    phoenix.userId = lion.phoenixServer.liveUserId + "+" + lion.event.appCode.toLowerCase();
                 else phoenix.userId = lion.phoenixServer.liveUserId;
                 phoenix.apiKey = lion.phoenix.liveApiKey;
             } else {
-                if(lion.event.appCode.length > 0) phoenix.userId = lion.phoenixServer.debugUserId + "+" + lion.appCode;
+                if(lion.event.appCode.length > 0) //
+                    phoenix.userId = lion.phoenixServer.debugUserId + "+" + lion.event.appCode.toLowerCase();
                 else phoenix.userId = lion.phoenixServer.debugUserId;
                 phoenix.apiKey = lion.phoenixServer.debugApiKey;
             }
@@ -34,10 +36,13 @@ https://phoenix.rwmanila.com/lion/dev
         }
     };
     lion.event = {
-        id: "",
         application: "",
+        applicationId: "",
         appCode: "",
-        isMonitor: false
+        isMonitor: false,
+        currentEvent: "",
+        currentEventId: "",
+        available: []
     };
     lion.user = {
         username: ""
@@ -82,6 +87,8 @@ https://phoenix.rwmanila.com/lion/dev
                         alert("Invalid ApplicationId; Lion Events initialization failed.");
                         window.location = 'http://rwmanila.com';
                         return;
+                    } else {
+                        lion.event.applicationId = applicationId;
                     }
                     // Insert HTML
                     lion.msgbox.object = $("<div />", {
@@ -115,7 +122,7 @@ https://phoenix.rwmanila.com/lion/dev
                         id: "lionMsgHeaderText"
                     }).append("Lion Events"));
                     // Load everything
-                    $.when(lion.refreshLocations()).then(function() {
+                    $.when(lion.refreshLocations(), getAppInfo()).done(function() {
                         lion.login(callback);
                     });
                 });
@@ -126,6 +133,7 @@ https://phoenix.rwmanila.com/lion/dev
         if(typeof $.jStorage.get("Auth").username !== 'undefined') {
             lion.user = $.jStorage.get("Auth");
             lion.locations = $.jStorage.get("AuthLocation");
+            lion.event = $.jStorage.get("AuthEvent");
             if(typeof(callback) == "function") callback();
         } else {
             // Clear MBox
@@ -150,6 +158,10 @@ https://phoenix.rwmanila.com/lion/dev
                 id: "lionMsgBodyAuthFormEmpLoc",
                 name: "lionMsgBodyAuthFormLocations",
                 style: "margin-top:10px;"
+            }).addClass("form-control input-lg")).append($("<select />", {
+                id: "lionMsgBodyAuthFormEmpEvt",
+                name: "lionMsgBodyAuthFormEvents",
+                style: "margin-top:10px;"
             }).addClass("form-control input-lg")));
             var locs = [];
             $.each(lion.locations.available, function(key, value) {
@@ -165,6 +177,22 @@ https://phoenix.rwmanila.com/lion/dev
                     disabled: "",
                     selected: ""
                 }).append("Select your Location"));
+            }
+            var evts = [];
+            $.each(lion.event.available, function(key, value) {
+                evts.push('<option value="' + value.eventId + '">' + value.eventName + '</option>');
+            });
+            $("#lionMsgBodyAuthFormEmpEvt").html(evts.join(''));
+            if($.isNumeric(getURLParameter("e"))) {
+                lion.event.currentEventId = getURLParameter("e");
+                $("#lionMsgBodyAuthFormEmpEvt").val(lion.event.currentEventId);
+                $("#lionMsgBodyAuthFormEmpEvt").attr("disabled", true);
+            } else {
+                $("#lionMsgBodyAuthFormEmpEvt").append($("<option />", {
+                    value: "",
+                    disabled: "",
+                    selected: ""
+                }).append("Select an Active Event"));
             }
             $("#lionMsgFooter").append($("<input />", {
                 type: "submit",
@@ -182,36 +210,38 @@ https://phoenix.rwmanila.com/lion/dev
                 $("#lionMsgBodyAuthForm").removeClass("has-error");
                 if(($("#lionMsgBodyAuthFormEmpNum").val().length > 0) && //
                     ($("#lionMsgBodyAuthFormEmpPwd").val().length > 0) && //
-                    ($("#lionMsgBodyAuthFormEmpLoc").val() !== null)) //
+                    ($("#lionMsgBodyAuthFormEmpLoc").val() !== null) && //
+                    ($("#lionMsgBodyAuthFormEmpEvt").val() !== null)) //
                     $("#lionMsgFooterAuthSubmit").attr("disabled", false);
                 else $("#lionMsgFooterAuthSubmit").attr("disabled", true);
             });
-            $("#lionMsgBodyAuthFormEmpLoc").on("change", function(e) {
+            $("#lionMsgBodyAuthFormEmpLoc, #lionMsgBodyAuthFormEmpEvt").on("change", function(e) {
                 $("#lionMsgBodyAuthForm").removeClass("has-error");
                 if(($("#lionMsgBodyAuthFormEmpNum").val().length > 0) && //
                     ($("#lionMsgBodyAuthFormEmpPwd").val().length > 0) && //
-                    ($("#lionMsgBodyAuthFormEmpLoc").val() !== null)) //
+                    ($("#lionMsgBodyAuthFormEmpLoc").val() !== null) && //
+                    ($("#lionMsgBodyAuthFormEmpEvt").val() !== null)) //
                     $("#lionMsgFooterAuthSubmit").attr("disabled", false);
                 else $("#lionMsgFooterAuthSubmit").attr("disabled", true);
             });
             $("#lionMsgBodyAuthFormEmpNum").on("keydown", function(e) {
-                if(e.which == 13) {
-                    $("#lionMsgBodyAuthFormEmpPwd").focus();
-                }
+                if(e.which == 13) $("#lionMsgBodyAuthFormEmpPwd").focus();
             });
             $("#lionMsgBodyAuthFormEmpPwd").on("keydown", function(e) {
-                if(e.which == 13) {
-                    if($("#lionMsgBodyAuthFormEmpLoc").val() !== null) {
-                        $("lionMsgBodyAuthForm").submit();
-                    } else {
-                        $("#lionMsgBodyAuthFormEmpLoc").focus();
-                    }
-                }
+                if(e.which == 13) $("#lionMsgBodyAuthFormEmpLoc").focus();
+            });
+            $("#lionMsgBodyAuthFormEmpLoc").on("keydown", function(e) {
+                if(e.which == 13) $("#lionMsgBodyAuthFormEmpEvt").focus();
+            });
+            $("#lionMsgBodyAuthFormEmpEvt").on("keydown", function(e) {
+                if(e.which == 13)
+                    if(!$("#lionMsgFooterAuthSubmit").attr("disabled")) //
+                        $("#lionMsgBodyAuthFormEmpEvt").submit();
             });
             $("#lionMsgBodyAuthForm").on("submit", function(e) {
                 e.preventDefault();
                 $("#lionMsgBodyAuthFormEmpNum, #lionMsgBodyAuthFormEmpPwd, #lionMsgBodyAuthFormEmpLoc, " + //
-                    "#lionMsgFooterAuthSubmit, #lionMsgFooterAuthForgot").attr("disabled", true);
+                    "#lionMsgBodyAuthFormEmpEvt, #lionMsgFooterAuthSubmit, #lionMsgFooterAuthForgot").attr("disabled", true);
                 lion.phoenixServer.send("$lion", "auth", {
                     "employeeNo": $("#lionMsgBodyAuthFormEmpNum").val(),
                     "password": $("#lionMsgBodyAuthFormEmpPwd").val()
@@ -221,15 +251,19 @@ https://phoenix.rwmanila.com/lion/dev
                         $("#lionMsgBodyAuthFormEmpPwd").val("");
                         $("#lionMsgBodyAuthFormEmpPwd").focus();
                         $("#lionMsgBodyAuthFormEmpNum, #lionMsgBodyAuthFormEmpPwd, #lionMsgBodyAuthFormEmpLoc, " + //
-                            "#lionMsgFooterAuthSubmit, #lionMsgFooterAuthForgot").attr("disabled", false);
+                            "lionMsgBodyAuthFormEmpEvt, #lionMsgFooterAuthSubmit, #lionMsgFooterAuthForgot").attr("disabled", false);
                         alert(d.response["error"]);
                     } else {
                         lion.user = d.response;
                         lion.locations.current = $("#lionMsgBodyAuthFormEmpLoc").val();
+                        lion.event.currentEventId = $("#lionMsgBodyAuthFormEmpEvt").val();
+                        lion.event.currentEvent = $("#lionMsgBodyAuthFormEmpEvt option:selected").text();
                         $.jStorage.set("Auth", lion.user);
                         $.jStorage.set("AuthLocation", lion.locations);
+                        $.jStorage.set("AuthEvent", lion.event);                        
                         $.jStorage.setTTL("Auth", 28800000);
                         $.jStorage.setTTL("AuthLocation", 28800000);
+                        $.jStorage.setTTL("AuthEvent", 28800000);
                         lion.msgbox.hide();
                         if(typeof(callback) == "function") callback();
                     }
@@ -242,6 +276,7 @@ https://phoenix.rwmanila.com/lion/dev
     lion.logout = function logoutF(force) {
         $.jStorage.set("Auth", {});
         $.jStorage.set("AuthLocation", {});
+        $.jStorage.set("AuthEvent", {});
         location.reload(force);
     };
     lion.refreshLocations = function refreshLocationsF() {
@@ -252,6 +287,7 @@ https://phoenix.rwmanila.com/lion/dev
                 window.location = 'http://rwmanila.com';
             } else {
                 lion.locations.current = d.response["Current"];
+                lion.locations.available = [];
                 $.each(d.response["Available"].split(","), function(key, value) {
                     lion.locations.available.push(value);
                 });
@@ -261,6 +297,31 @@ https://phoenix.rwmanila.com/lion/dev
         return def.promise();
     };
     // Private Methods
+    var getAppInfo = function getAppInfo() {
+        var def = $.Deferred();
+        lion.phoenixServer.send("$lion", "authGetAppInfo", {
+            "applicationId": lion.event.applicationId
+        }, function(d) {
+            if(d.exitCode === 0) {
+                alert("lion.getAppInfo Error: " + d.response["error"]);
+                window.location = 'http://rwmanila.com';
+            } else {
+                lion.event.appCode = d.response["applicationCode"];
+                lion.event.application = d.response["applicationName"];
+                lion.event.applicationId = d.response["applicationId"];
+                lion.event.applicationUrl = d.response["applicationURL"];
+                lion.event.isMonitor = d.response["applicationTag_monitor"]
+                $.each(d.response["events"].split(","), function(key, value) {
+                    lion.event.available.push({
+                        eventId: value.split(":")[0],
+                        eventName: value.split(":")[1]
+                    });
+                });
+                def.resolve();
+            }
+        });
+        return def.promise();
+    }
     var getURLParameter = function getURLParameterF(name) {
         return decodeURIComponent((new RegExp('[?|&]' + name + '=' + '([^&;]+?)(&|#|;|$)').exec(location.search) || [, ""])[1].replace(/\+/g, '%20')) || null;
     };

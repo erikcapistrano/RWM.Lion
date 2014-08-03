@@ -27,7 +27,8 @@
 
 #lionMsgBodyAuthFormEmpNum, 
 #lionMsgBodyAuthFormEmpPwd,
-#lionMsgBodyAuthFormEmpLoc {
+#lionMsgBodyAuthFormEmpLoc,
+#lionMsgBodyAuthFormEmpEvt {
     background-color: transparent;
 }
 
