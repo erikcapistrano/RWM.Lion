@@ -1,11 +1,11 @@
 /*
-Lion API v.0.0.3
+Lion API v.0.0.4
 https://phoenix.rwmanila.com/lion/dev
 (c) 2014 by it.appdev@rwmanila.com. All rights reserved.
 */
 (function(lion, undefined) {
     // Public Properties
-    lion.ver = "0.0.3";
+    lion.ver = "0.0.4";
     lion.live = false;
     lion.phoenixServer = {
         liveUserId: "lion.live",
@@ -295,6 +295,29 @@ https://phoenix.rwmanila.com/lion/dev
             }
         });
         return def.promise();
+    };
+    lion.onSwipe = function onSwipeF(callback){
+        if(typeof(callback) == "function") {
+            $(window).keydown(function(e) {
+                if(e.which == 13) {
+                    callback($.jStorage.get("input"));
+                    $.jStorage.set("input", "");
+                } else 
+                    $.jStorage.set("input", $.jStorage.get("input") + String.fromCharCode(e.which));
+            });
+        } else {
+            $.jStorage.set("input", "");
+            $(window).off("keydown");
+        }
+    };
+    lion.onSwipeClear = function onSwipeClearF(){
+        lion.onSwipe(null);
+    };
+    lion.checkIfQualified = function checkIfQualifiedF(memberId, callback){
+        lion.phoenixServer.send("$lion", "isMemberQualified", {
+            "memberId": memberId,
+            "eventId": lion.event.currentEventId
+        }, callback);
     };
     // Private Methods
     var getAppInfo = function getAppInfo() {
